@@ -22,6 +22,9 @@ f4F0			dd	4.0
 f0F0458		dd	0.0458
 f0F08333	dd	0.08333
 
+cursx		dw	0
+cursy		dw	0
+
 colortbl:
 		db	8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15, 15
 
@@ -29,6 +32,10 @@ _start:
 		xor	ax, ax
 		mov	ds, ax
 		mov	ss, ax
+		mov	word [cursx], ax
+		mov	word [cursy], ax
+		mov	ax, 0xb800
+		mov	es, ax
 		mov	sp, stack
 		call	cls
 		finit
@@ -125,7 +132,8 @@ end_if_ile9:
 ;				write(temp);
 		mov	ax, word [ui16_i]
 		add	ax, '0'
-		mov	bx, word [ui16_ic]	; set text color
+		mov	dx, word [ui16_ic]	; set text color
+		mov	ah, dl
 		call	putch
 ;				i := 99;
 		mov	word [ui16_i], 99
@@ -156,22 +164,50 @@ exit_for_y:
 		jmp	exit_for_y
 ; end asciiart
 
-putch:								; al = ASCII character to write
-		mov	ah, 0xe
-;		mov	bx, 15				; text color
-		int	10h
+putch:								; al = ASCII character to write, ah = text color
+;		mov	ah, 0xe
+;;		mov	bx, 15				; text color
+;		int	10h
+;		retn
+		push	ax
+		mov	ax, word [cursy]
+		mov	ah, 0
+		mov	dl, 80 * 2
+		mul dl
+		mov	bx, ax
+		mov	di, word [cursx]
+		sal di, 1
+		pop	ax
+		mov	es:[bx+di], ax
+		mov	ax, word [cursx]
+		inc	ax
+		cmp	ax, 80
+		jb	.skip
+		xor ax, ax
+.skip:
+		mov	word [cursx], ax
 		retn
 
+
 crlf:
-		mov	ax, 0x0d
-		call	putch
-		mov	ax, 0x0a
-		call	putch
+;		mov	ax, 0x0d
+;		call	putch
+;		mov	ax, 0x0a
+;		call	putch
+;		retn
+		mov	word [cursx], 0
+		mov	ax, word [cursy]
+		inc	ax
+		cmp	ax, 25
+		jb	.skip
+		mov	ax, 24
+.skip:
+		mov word [cursy], ax
 		retn
 
 cls:									; clear screen
-		mov	ax, 0xb800
-		mov	es, ax
+;		mov	ax, 0xb800
+;		mov	es, ax
 		mov	cx, 80 * 25
 		mov	ah, 15
 		mov	al, ' '
