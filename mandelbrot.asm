@@ -32,8 +32,8 @@ _start:
 		xor	ax, ax
 		mov	ds, ax
 		mov	ss, ax
-		mov	word [cursx], ax
-		mov	word [cursy], ax
+;		mov	word [cursx], ax
+;		mov	word [cursy], ax
 		mov	ax, 0xb800
 		mov	es, ax
 		mov	sp, stack
@@ -165,10 +165,6 @@ exit_for_y:
 ; end asciiart
 
 putch:								; al = ASCII character to write, ah = text color
-;		mov	ah, 0xe
-;;		mov	bx, 15				; text color
-;		int	10h
-;		retn
 		push	ax
 		mov	ax, word [cursy]
 		mov	ah, 0
@@ -190,11 +186,6 @@ putch:								; al = ASCII character to write, ah = text color
 
 
 crlf:
-;		mov	ax, 0x0d
-;		call	putch
-;		mov	ax, 0x0a
-;		call	putch
-;		retn
 		mov	word [cursx], 0
 		mov	ax, word [cursy]
 		inc	ax
@@ -206,8 +197,6 @@ crlf:
 		retn
 
 cls:									; clear screen
-;		mov	ax, 0xb800
-;		mov	es, ax
 		mov	cx, 80 * 25
 		mov	ah, 15
 		mov	al, ' '
