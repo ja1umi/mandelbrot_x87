@@ -7,7 +7,7 @@ stack	equ	0x7fff
 
 ;	module asciiart;
 ; var
-;ui16_ic	dw	0
+ui16_ic	dw	0					; text color
 ui16_i	dw	0
 i16_x		dw	0
 i16_y		dw	0
@@ -22,17 +22,9 @@ f4F0			dd	4.0
 f0F0458		dd	0.0458
 f0F08333	dd	0.08333
 
-;crlf:			db	0x0d, 0x0a
-;.len			equ	$ - crlf
-;spc:			db	' '
-;.len			equ	$ - spc
+colortbl:
+		db	8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15, 15
 
-;%macro	Write	0
-;		mov	eax, 4		; system call for writing
-;		mov	ebx, 1		; file descriptor (stdout)
-;		int	0x80
-;%endmacro
-;
 _start:
 		xor	ax, ax
 		mov	ds, ax
@@ -115,24 +107,26 @@ while_i:
 		jz	end_if_aa
 		cmp		ax, 0b0_1_000_000_00000000	; bit 14 (C3) --> Zero flag
 		jz	end_if_aa
+;				setColor(i);
+		mov	ax, [ui16_i]
+		lea	bx, colortbl
+		mov	ax, word [ui16_i]
+		xlat
+		mov	[ui16_ic], ax
 ;				if i > 9 then
 		mov	ax, word [ui16_i]
-		mov	word [ui16_ic], ax
 		cmp	ax, 9
 		jle	end_if_ile9
 ;					i := i + 7;
 		add	word [ui16_i], 7
 ;				end;
 end_if_ile9:
-;				ic := chr(ord('0')+i);
-;				write(ic);
+;				temp := chr(ord('0')+i);
+;				write(temp);
 		mov	ax, word [ui16_i]
 		add	ax, '0'
-		mov	bx, word [ui16_ic]
+		mov	bx, word [ui16_ic]	; set text color
 		call	putch
-;		lea	ecx, ui16_ic		; address of variable ic
-;		mov	edx, 1					; number of character to write
-;		Write
 ;				i := 99;
 		mov	word [ui16_i], 99
 ;			end;
@@ -149,18 +143,11 @@ exit_while_i:
 ;		write(' ');
 		mov	ax, ' '
 		call	putch
-;		lea	ecx, spc			; address of the string
-;		mov	edx, spc.len	; number of bytes to write
-;		Write
 exit_if_ieq16:
 ;	end
 		inc	word [i16_x]
 		jmp	for_x
 exit_for_x:
-;		writeln();
-;		lea	ecx, crlf			; address of the string
-;		mov	edx, crlf.len	; number of bytes to write
-;		Write
 		call	crlf
 ;	end
 		inc	word [i16_y]
