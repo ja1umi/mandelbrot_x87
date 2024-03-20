@@ -1,30 +1,46 @@
+[cpu 386]
 stack	equ	0x7fff
 
 [org 0x7c00]
 
-		jmp	start
+		jmp	_start
 
-;
+;	module asciiart;
+; var
+;ui16_ic	dw	0
+ui16_i	dw	0
+i16_x		dw	0
+i16_y		dw	0
+f_a			dd	0.0
+f_b			dd	0.0
+f_ca		dd	0.0
+f_cb		dd	0.0
+f_t			dd	0.0
+
 f2F0			dd	2.0
 f4F0			dd	4.0
 f0F0458		dd	0.0458
 f0F08333	dd	0.08333
+
+;crlf:			db	0x0d, 0x0a
+;.len			equ	$ - crlf
+;spc:			db	' '
+;.len			equ	$ - spc
+
+;%macro	Write	0
+;		mov	eax, 4		; system call for writing
+;		mov	ebx, 1		; file descriptor (stdout)
+;		int	0x80
+;%endmacro
 ;
-ui16_i		dw	0
-i16_x			dw	0
-i16_y			dw	0
-f_a				dd	0.0
-f_b				dd	0.0
-f_ca			dd	0.0
-f_cb			dd	0.0
-f_t				dd	0.0
-;
-start:
+_start:
 		xor	ax, ax
 		mov	ds, ax
 		mov	ss, ax
 		mov	sp, stack
-;		call	cls
+		call	cls
+		finit
+
 ;	for y:=-12 to 12 do
 		mov	word [i16_y], -12
 for_y:
@@ -101,17 +117,22 @@ while_i:
 		jz	end_if_aa
 ;				if i > 9 then
 		mov	ax, word [ui16_i]
+		mov	word [ui16_ic], ax
 		cmp	ax, 9
-		jnz	end_if_igt9
+		jle	end_if_ile9
 ;					i := i + 7;
-		mov	ax, word [ui16_i]
-		add	ax, 7
-		mov	word [ui16_i], ax
+		add	word [ui16_i], 7
 ;				end;
-end_if_igt9:
-;				write( chr(ord('0')+i) );
-		or	ax, '0'
+end_if_ile9:
+;				ic := chr(ord('0')+i);
+;				write(ic);
+		mov	ax, word [ui16_i]
+		add	ax, '0'
+		mov	bx, word [ui16_ic]
 		call	putch
+;		lea	ecx, ui16_ic		; address of variable ic
+;		mov	edx, 1					; number of character to write
+;		Write
 ;				i := 99;
 		mov	word [ui16_i], 99
 ;			end;
@@ -128,26 +149,37 @@ exit_while_i:
 ;		write(' ');
 		mov	ax, ' '
 		call	putch
+;		lea	ecx, spc			; address of the string
+;		mov	edx, spc.len	; number of bytes to write
+;		Write
 exit_if_ieq16:
 ;	end
 		inc	word [i16_x]
 		jmp	for_x
 exit_for_x:
 ;		writeln();
-		mov	ax, 0x0d
-		call	putch
-		mov	ax, 0x0a
-		call	putch
+;		lea	ecx, crlf			; address of the string
+;		mov	edx, crlf.len	; number of bytes to write
+;		Write
+		call	crlf
 ;	end
 		inc	word [i16_y]
 		jmp	for_y
 exit_for_y:
 		jmp	exit_for_y
+; end asciiart
 
 putch:								; al = ASCII character to write
 		mov	ah, 0xe
-		mov	bx, 15				; text color
+;		mov	bx, 15				; text color
 		int	10h
+		retn
+
+crlf:
+		mov	ax, 0x0d
+		call	putch
+		mov	ax, 0x0a
+		call	putch
 		retn
 
 cls:									; clear screen
