@@ -1,0 +1,209 @@
+     1                                  [cpu 386]
+     2                                  stack	equ	0x7fff
+     3                                  
+     4                                  [org 0x7c00]
+     5                                  
+     6 00000000 EB40                    		jmp	_start
+     7                                  
+     8                                  ;	module asciiart;
+     9                                  ; var
+    10 00000002 0000                    ui16_ic	dw	0					; text color
+    11 00000004 0000                    ui16_i	dw	0
+    12 00000006 0000                    i16_x		dw	0
+    13 00000008 0000                    i16_y		dw	0
+    14 0000000A 00000000                f_a			dd	0.0
+    15 0000000E 00000000                f_b			dd	0.0
+    16 00000012 00000000                f_ca		dd	0.0
+    17 00000016 00000000                f_cb		dd	0.0
+    18 0000001A 00000000                f_t			dd	0.0
+    19                                  
+    20 0000001E 00000040                f2F0			dd	2.0
+    21 00000022 00008040                f4F0			dd	4.0
+    22 00000026 C8983B3D                f0F0458		dd	0.0458
+    23 0000002A EBA8AA3D                f0F08333	dd	0.08333
+    24                                  
+    25 0000002E 0000                    cursx		dw	0
+    26 00000030 0000                    cursy		dw	0
+    27                                  
+    28                                  colortbl:
+    29 00000032 080109020A030B040C-     		db	8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15, 15
+    29 0000003B 050D060E070F0F     
+    30                                  
+    31                                  _start:
+    32 00000042 31C0                    		xor	ax, ax
+    33 00000044 8ED8                    		mov	ds, ax
+    34 00000046 8ED0                    		mov	ss, ax
+    35                                  ;		mov	word [cursx], ax
+    36                                  ;		mov	word [cursy], ax
+    37 00000048 B800B8                  		mov	ax, 0xb800
+    38 0000004B 8EC0                    		mov	es, ax
+    39 0000004D BCFF7F                  		mov	sp, stack
+    40 00000050 E84501                  		call	cls
+    41 00000053 9BDBE3                  		finit
+    42                                  
+    43                                  ;	for y:=-12 to 12 do
+    44 00000056 C706[0800]F4FF          		mov	word [i16_y], -12
+    45                                  for_y:
+    46 0000005C A1[0800]                		mov ax, word [i16_y]
+    47 0000005F 83F800                  		cmp	ax, 0
+    48 00000062 7E08                    		jle	.skip
+    49 00000064 83F80C                  		cmp	ax, 12
+    50 00000067 7603                    		jbe	.skip
+    51 00000069 E9EF00                  		jmp	exit_for_y
+    52                                  .skip:
+    53                                  ;	for x:=-39 to 39 do
+    54 0000006C C706[0600]D9FF          		mov	word [i16_x], -39
+    55                                  for_x:
+    56 00000072 A1[0600]                		mov	ax, word [i16_x]
+    57 00000075 83F800                  		cmp	ax, 0
+    58 00000078 7E08                    		jle	.skip
+    59 0000007A 83F827                  		cmp	ax, 39
+    60 0000007D 7603                    		jbe	.skip
+    61 0000007F E9CF00                  		jmp	exit_for_x
+    62                                  .skip:
+    63                                  ;		ca :=float(x) * 0.0458;
+    64                                  ;		a := ca;
+    65 00000082 DF06[0600]              		fild	word [i16_x]
+    66 00000086 D80E[2600]              		fmul	dword [f0F0458]
+    67 0000008A D916[1200]              		fst		dword [f_ca]
+    68 0000008E D91E[0A00]              		fstp	dword [f_a]
+    69                                  ;		cb := float(y) * 0.08333;
+    70                                  ;		b := cb;
+    71 00000092 DF06[0800]              		fild	word [i16_y]
+    72 00000096 D80E[2A00]              		fmul	dword [f0F08333]
+    73 0000009A D916[1600]              		fst		dword [f_cb]
+    74 0000009E D91E[0E00]              		fstp	dword [f_b]
+    75                                  ;		i := 0;
+    76 000000A2 31C0                    		xor	ax, ax
+    77 000000A4 A3[0400]                		mov	word [ui16_i], ax
+    78                                  ;		while i < 16 do
+    79                                  while_i:
+    80 000000A7 A1[0400]                		mov	ax, word [ui16_i]
+    81 000000AA 83F810                  		cmp	ax, 16
+    82 000000AD 0F838B00                		jae	exit_while_i
+    83                                  ;			t := a*a - b*b + ca;
+    84 000000B1 D906[0A00]              		fld	dword [f_a]
+    85 000000B5 DCC8                    		fmul	st0, st0
+    86 000000B7 D906[0E00]              		fld	dword [f_b]
+    87 000000BB DCC8                    		fmul	st0, st0
+    88 000000BD DEE9                    		fsub
+    89                                  ;		fld	dword [f_ca]
+    90                                  ;		fadd
+    91 000000BF D806[1200]              		fadd	dword [f_ca]
+    92 000000C3 D91E[1A00]              		fstp	dword [f_t]
+    93                                  ;			b := 2.0*a*b + cb;
+    94 000000C7 D906[1E00]              		fld	dword [f2F0]
+    95 000000CB D80E[0A00]              		fmul	dword [f_a]
+    96 000000CF D80E[0E00]              		fmul	dword [f_b]
+    97 000000D3 D806[1600]              		fadd	dword [f_cb]
+    98 000000D7 D91E[0E00]              		fstp	dword [f_b]
+    99                                  ;			a := t;
+   100 000000DB D906[1A00]              		fld	dword [f_t]
+   101 000000DF D91E[0A00]              		fstp	dword [f_a]
+   102                                  ;			if (a*a + b*b) > 4 then
+   103 000000E3 D906[0A00]              		fld	dword [f_a]
+   104 000000E7 DCC8                    		fmul	st0, st0
+   105 000000E9 D906[0E00]              		fld	dword [f_b]
+   106 000000ED DCC8                    		fmul	st0, st0
+   107 000000EF DEC1                    		fadd
+   108 000000F1 D81E[2200]              		fcomp	dword [f4F0]
+   109 000000F5 9BDFE0                  		fstsw	ax
+   110                                  		;					    C     CCC
+   111                                  		;					    3     210
+   112 000000F8 250047                  		and		ax, 0b0_1_000_111_00000000	; take only condition code flags
+   113 000000FB 3D0001                  		cmp		ax, 0b0_0_000_001_00000000	; bit 8 (C0) --> Carry flag
+   114 000000FE 7435                    		jz	end_if_aa
+   115 00000100 3D0040                  		cmp		ax, 0b0_1_000_000_00000000	; bit 14 (C3) --> Zero flag
+   116 00000103 7430                    		jz	end_if_aa
+   117                                  ;				setColor(i);
+   118 00000105 A1[0400]                		mov	ax, [ui16_i]
+   119 00000108 8D1E[3200]              		lea	bx, colortbl
+   120 0000010C A1[0400]                		mov	ax, word [ui16_i]
+   121 0000010F D7                      		xlat
+   122 00000110 A3[0200]                		mov	[ui16_ic], ax
+   123                                  ;				if i > 9 then
+   124 00000113 A1[0400]                		mov	ax, word [ui16_i]
+   125 00000116 83F809                  		cmp	ax, 9
+   126 00000119 7E05                    		jle	end_if_ile9
+   127                                  ;					i := i + 7;
+   128 0000011B 8306[0400]07            		add	word [ui16_i], 7
+   129                                  ;				end;
+   130                                  end_if_ile9:
+   131                                  ;				temp := chr(ord('0')+i);
+   132                                  ;				write(temp);
+   133 00000120 A1[0400]                		mov	ax, word [ui16_i]
+   134 00000123 83C030                  		add	ax, '0'
+   135 00000126 8B16[0200]              		mov	dx, word [ui16_ic]	; set text color
+   136 0000012A 88D4                    		mov	ah, dl
+   137 0000012C E82E00                  		call	putch
+   138                                  ;				i := 99;
+   139 0000012F C706[0400]6300          		mov	word [ui16_i], 99
+   140                                  ;			end;
+   141                                  end_if_aa:
+   142                                  ;			i := i + 1;
+   143 00000135 FF06[0400]              		inc	word [ui16_i]
+   144                                  ;		end;
+   145 00000139 E96BFF                  		jmp	while_i
+   146                                  exit_while_i:
+   147                                  ;		if i = 16 then
+   148 0000013C A1[0400]                		mov	ax, word [ui16_i]
+   149 0000013F 83F810                  		cmp	ax, 16
+   150 00000142 7506                    		jne	exit_if_ieq16
+   151                                  ;		write(' ');
+   152 00000144 B82000                  		mov	ax, ' '
+   153 00000147 E81300                  		call	putch
+   154                                  exit_if_ieq16:
+   155                                  ;	end
+   156 0000014A FF06[0600]              		inc	word [i16_x]
+   157 0000014E E921FF                  		jmp	for_x
+   158                                  exit_for_x:
+   159 00000151 E82E00                  		call	crlf
+   160                                  ;	end
+   161 00000154 FF06[0800]              		inc	word [i16_y]
+   162 00000158 E901FF                  		jmp	for_y
+   163                                  exit_for_y:
+   164 0000015B EBFE                    		jmp	exit_for_y
+   165                                  ; end asciiart
+   166                                  
+   167                                  putch:								; al = ASCII character to write, ah = text color
+   168 0000015D 50                      		push	ax
+   169 0000015E A1[3000]                		mov	ax, word [cursy]
+   170 00000161 B400                    		mov	ah, 0
+   171 00000163 B2A0                    		mov	dl, 80 * 2
+   172 00000165 F6E2                    		mul dl
+   173 00000167 89C3                    		mov	bx, ax
+   174 00000169 8B3E[2E00]              		mov	di, word [cursx]
+   175 0000016D D1E7                    		sal di, 1
+   176 0000016F 58                      		pop	ax
+   177 00000170 268901                  		mov	es:[bx+di], ax
+   178 00000173 A1[2E00]                		mov	ax, word [cursx]
+   179 00000176 40                      		inc	ax
+   180 00000177 83F850                  		cmp	ax, 80
+   181 0000017A 7202                    		jb	.skip
+   182 0000017C 31C0                    		xor ax, ax
+   183                                  .skip:
+   184 0000017E A3[2E00]                		mov	word [cursx], ax
+   185 00000181 C3                      		retn
+   186                                  
+   187                                  
+   188                                  crlf:
+   189 00000182 C706[2E00]0000          		mov	word [cursx], 0
+   190 00000188 A1[3000]                		mov	ax, word [cursy]
+   191 0000018B 40                      		inc	ax
+   192 0000018C 83F819                  		cmp	ax, 25
+   193 0000018F 7203                    		jb	.skip
+   194 00000191 B81800                  		mov	ax, 24
+   195                                  .skip:
+   196 00000194 A3[3000]                		mov word [cursy], ax
+   197 00000197 C3                      		retn
+   198                                  
+   199                                  cls:									; clear screen
+   200 00000198 B9D007                  		mov	cx, 80 * 25
+   201 0000019B B40F                    		mov	ah, 15
+   202 0000019D B020                    		mov	al, ' '
+   203 0000019F 31FF                    		xor	di, di
+   204 000001A1 F3AB                    rep	stosw
+   205 000001A3 C3                      		retn
+   206                                  
+   207 000001A4 00<rep 5Ah>             times 510-($-$$) db 0
+   208 000001FE 55AA                        dw 0xAA55
